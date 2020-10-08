@@ -1,6 +1,4 @@
 from setuptools import setup, Extension
-from setuptools.command.build_py import build_py as _build_py
-from setuptools.command.build_ext import build_ext
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 import subprocess
 import os
@@ -13,7 +11,6 @@ log = logging.getLogger(__file__)
 
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
-
 def try_cythonize(arg):
     try:
         import numpy
@@ -25,63 +22,6 @@ def try_cythonize(arg):
     except Exception as e:
         return []
 
-
-try:  # If we are in a git-repo, get git-describe version.
-    path = os.path.abspath(os.path.dirname(__file__))
-    forgi_version = subprocess.check_output(["git", "describe", "--always"], universal_newlines=True).strip()
-    try:
-        subprocess.check_call(["git", "diff-index", "--quiet", "HEAD", "--"],universal_newlines=True,)
-    except subprocess.CalledProcessError:
-        forgi_version += "+uncommited_changes"
-    # Use a subclass of build_py from distutils to costumize the build.
-    class build_py(_build_py):
-        def run(self):
-            """
-            During building, adds a variable with the complete version (from git describe)
-            to forgi/__init__.py.
-            """
-            outfile = self.get_module_outfile(self.build_lib, ["forgi"], "__init__")
-            try:
-                os.remove(outfile)  # If we have an old version, delete it, so _build_py will copy the original version into the build directory.
-            except:
-                pass
-            # Superclass build
-            _build_py.run(self)
-            # Apped the version number to init.py
-            with open(outfile, "a") as of:
-                of.write('\n__complete_version__ = "{}"'.format(forgi_version))
-
-
-except:  # Outside of a git repo, do nothing.
-    build_py = _build_py
-
-
-class BuildFailed(Exception):
-    pass
-
-
-def construct_build_ext(build_ext):
-    """
-    Thanks to https://stackoverflow.com/a/41785785/5069869 and https://github.com/Toblerity/Shapely/blob/master/setup.py
-    """
-
-    class WrappedBuildExt(build_ext):
-        # This class allows C extension building to fail.
-        def run(self):
-            try:
-                build_ext.run(self)
-            except DistutilsPlatformError as x:
-                raise BuildFailed(x)
-
-        def build_extension(self, ext):
-            try:
-                build_ext.build_extension(self, ext)
-            except ext_errors as x:
-                raise BuildFailed(x)
-
-    return WrappedBuildExt
-
-
 extras = {
     "forgi.visual": ["matplotlib>=2.0"],
     "development": ["cython"],
@@ -91,10 +31,6 @@ extras = {
 extras["all"] = list(itertools.chain(extras.values()))
 setup_args = {
     "zip_safe": False,
-    "cmdclass": {
-        "build_py": build_py,
-        "build_ext": construct_build_ext(build_ext),
-    },
     "name": "forgi",
     "version": "2.0.3",
     "description": "RNA Graph Library",
@@ -136,6 +72,7 @@ setup_args = {
         "examples/forgi_config.py",
     ],
     "install_requires": [
+        "cython",
         "numpy>=1.10.0",
         "scipy>=0.19.1",
         "pandas>=0.20",
@@ -171,10 +108,6 @@ setup_args = {
     ],
 }
 
-try:
-    setup(**setup_args)
-except BuildFailed as ex:
-    log.warning("The C extension could not be compiled")
-    del setup_args["ext_modules"]
-    setup(**setup_args)
-    log.info("Installed forgi without faster compiled C-code.")
+
+setup(**setup_args)
+
