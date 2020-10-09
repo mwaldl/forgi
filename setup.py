@@ -16,9 +16,9 @@ def try_cythonize(arg):
         import numpy
         try:
             from Cython.Build import cythonize
-            return cythonize([Extension("", [arg + ".pyx"], include_dirs=[numpy.get_include()])])
+            return cythonize([Extension(arg.replace("/", "."), [arg + ".pyx"], include_dirs=[numpy.get_include()])])
         except Exception as e:
-            return [Extension("", [arg + ".c"], include_dirs=[numpy.get_include()])]
+            return [Extension(arg.replace("/", "."), [arg + ".c"], include_dirs=[numpy.get_include()])]
     except Exception as e:
         return []
 
@@ -60,7 +60,8 @@ setup_args = {
             "data/average_atom_positions.json",
             "data/aminor_geometries.csv",
             "data/aminor_params.json",
-        ]
+        ],
+        "forgi.threedee.utilities": ["*.pyx"],
     },
     "data_files": [("", ["CREDITS", "LICENSE"])],
     "scripts": [
