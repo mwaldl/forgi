@@ -1,5 +1,9 @@
-from setuptools import setup, Extension
-from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
+from distutils.core import setup, Extension
+from distutils.errors import (
+    CCompilerError,
+    DistutilsExecError,
+    DistutilsPlatformError,
+)
 import subprocess
 import os
 import itertools
@@ -9,18 +13,47 @@ import logging
 logging.basicConfig()
 log = logging.getLogger(__file__)
 
-ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
+ext_errors = (
+    CCompilerError,
+    DistutilsExecError,
+    DistutilsPlatformError,
+    IOError,
+)
+
 
 def try_cythonize(arg):
     try:
         import numpy
+
         try:
             from Cython.Build import cythonize
-            return cythonize([Extension(arg.replace("/", "."), [arg + ".pyx"], include_dirs=[numpy.get_include()])])
+
+            return cythonize(
+                [
+                    Extension(
+                        arg.replace("/", "."),
+                        [arg + ".pyx"],
+                        include_dirs=[numpy.get_include()],
+                    )
+                ]
+            )
         except Exception as e:
-            return [Extension(arg.replace("/", "."), [arg + ".c"], include_dirs=[numpy.get_include()])]
+            print(e)
+            return [
+                Extension(
+                    arg.replace("/", "."),
+                    [arg + ".c"],
+                    include_dirs=[numpy.get_include()],
+                )
+            ]
     except Exception as e:
+        print(e)
         return []
+
+
+class BuildFailed(Exception):
+    pass
+
 
 extras = {
     "forgi.visual": ["matplotlib>=2.0"],
@@ -73,7 +106,7 @@ setup_args = {
         "examples/forgi_config.py",
     ],
     "install_requires": [
-        "cython",
+        "Cython",
         "numpy>=1.10.0",
         "scipy>=0.19.1",
         "pandas>=0.20",
@@ -83,7 +116,6 @@ setup_args = {
         "appdirs>=1.4",
         "logging_exceptions>=0.1.8",
     ],
-    "setup_requires": ["numpy>=1.10.0", "cython"],
     "extras_require": extras,
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     "classifiers": [
@@ -109,6 +141,4 @@ setup_args = {
     ],
 }
 
-
 setup(**setup_args)
-
